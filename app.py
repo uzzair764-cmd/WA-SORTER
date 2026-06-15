@@ -6,10 +6,6 @@ import streamlit as st
 from processor import run_export
 
 
-# ============================================================
-# PAGE CONFIG
-# ============================================================
-
 st.set_page_config(
     page_title="WA Exporter",
     page_icon="whatsapp.png",
@@ -29,13 +25,6 @@ st.markdown(
         background-color: #fafafa;
     }
 
-    .title-row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 0.2rem;
-    }
-
     .main-title {
         font-size: 2.2rem;
         font-weight: 700;
@@ -52,10 +41,6 @@ st.markdown(
 )
 
 
-# ============================================================
-# HELPERS
-# ============================================================
-
 def safe_filename(name):
     name = os.path.basename(str(name))
     name = re.sub(r'[\\/*?:"<>|]', "_", name)
@@ -64,10 +49,8 @@ def safe_filename(name):
 
 def csv_to_list(text):
     text = str(text).strip()
-
-    if text == "":
+    if text == "" or text == "NONE":
         return []
-
     return [x.strip().upper() for x in text.split(",") if x.strip() != ""]
 
 
@@ -89,10 +72,8 @@ def normalize_sikap_config(x):
 
     if "KELABU" in x:
         return "KELABU"
-
     if "HITAM" in x:
         return "HITAM"
-
     if "PUTIH" in x:
         return "PUTIH"
 
@@ -103,34 +84,18 @@ def get_structure_options(input_level):
     if input_level == "DUN":
         return {
             "DUN folder > individual DM Excel files": "DUN_DM_FILE",
-            "DUN folder > DM folder > one Excel inside each DM folder": "DUN_DM_FOLDER",
             "DUN folder > DM folder > separate KAUM Excel files": "DUN_DM_KAUM",
             "DUN folder > one DUN Excel file": "DUN_FILE",
             "DUN folder > separate KAUM Excel files": "DUN_KAUM",
-            "ONE Excel file only": "ONE_FILE",
-            "AGE range Excel files only": "AGE_FILE",
-        }
-
-    if input_level == "PARLIMEN":
-        return {
-            "PARLIMEN folder > DUN folder > individual DM Excel files": "PARLIMEN_DUN_DM_FILE",
-            "PARLIMEN folder > DUN folder > DM folder > one Excel inside each DM folder": "PARLIMEN_DUN_DM_FOLDER",
-            "PARLIMEN folder > DUN folder > DM folder > separate KAUM Excel files": "PARLIMEN_DUN_DM_KAUM",
-            "PARLIMEN folder > DUN Excel files": "PARLIMEN_DUN_FILE",
-            "PARLIMEN folder > one PARLIMEN Excel file": "PARLIMEN_FILE",
-            "PARLIMEN folder > DUN folder > separate KAUM Excel files": "PARLIMEN_DUN_KAUM",
-            "ONE Excel file only": "ONE_FILE",
             "AGE range Excel files only": "AGE_FILE",
         }
 
     return {
-        "ONE Excel file only": "ONE_FILE",
-        "DUN folder > individual DM Excel files": "DUN_DM_FILE",
-        "DUN folder > DM folder > one Excel inside each DM folder": "DUN_DM_FOLDER",
-        "DUN folder > DM folder > separate KAUM Excel files": "DUN_DM_KAUM",
         "PARLIMEN folder > DUN folder > individual DM Excel files": "PARLIMEN_DUN_DM_FILE",
         "PARLIMEN folder > DUN folder > DM folder > separate KAUM Excel files": "PARLIMEN_DUN_DM_KAUM",
-        "KAUM folders > one Excel inside each kaum folder": "KAUM_FOLDER",
+        "PARLIMEN folder > DUN Excel files": "PARLIMEN_DUN_FILE",
+        "PARLIMEN folder > one PARLIMEN Excel file": "PARLIMEN_FILE",
+        "PARLIMEN folder > DUN folder > separate KAUM Excel files": "PARLIMEN_DUN_KAUM",
         "AGE range Excel files only": "AGE_FILE",
     }
 
@@ -138,17 +103,9 @@ def get_structure_options(input_level):
 def map_structure_to_config(structure_code):
     force_split_by_kaum = False
 
-    if structure_code == "ONE_FILE":
-        group_levels = []
-        last_group_as_folder = False
-
-    elif structure_code == "DUN_DM_FILE":
+    if structure_code == "DUN_DM_FILE":
         group_levels = ["DUN", "DM"]
         last_group_as_folder = False
-
-    elif structure_code == "DUN_DM_FOLDER":
-        group_levels = ["DUN", "DM"]
-        last_group_as_folder = True
 
     elif structure_code == "DUN_DM_KAUM":
         group_levels = ["DUN", "DM"]
@@ -168,10 +125,6 @@ def map_structure_to_config(structure_code):
         group_levels = ["PARLIMEN", "DUN", "DM"]
         last_group_as_folder = False
 
-    elif structure_code == "PARLIMEN_DUN_DM_FOLDER":
-        group_levels = ["PARLIMEN", "DUN", "DM"]
-        last_group_as_folder = True
-
     elif structure_code == "PARLIMEN_DUN_DM_KAUM":
         group_levels = ["PARLIMEN", "DUN", "DM"]
         last_group_as_folder = True
@@ -189,10 +142,6 @@ def map_structure_to_config(structure_code):
         group_levels = ["PARLIMEN", "DUN"]
         last_group_as_folder = True
         force_split_by_kaum = True
-
-    elif structure_code == "KAUM_FOLDER":
-        group_levels = ["KAUM"]
-        last_group_as_folder = True
 
     elif structure_code == "AGE_FILE":
         group_levels = ["AGE"]
@@ -244,10 +193,6 @@ def build_sikap_filter(sikap_filter, custom_sikap):
     return [normalize_sikap_config(x) for x in csv_to_list(custom_sikap)]
 
 
-# ============================================================
-# HEADER
-# ============================================================
-
 col_logo, col_title = st.columns([0.07, 0.93])
 
 with col_logo:
@@ -262,17 +207,12 @@ st.markdown(
 )
 
 
-# ============================================================
-# SIDEBAR SETTINGS
-# ============================================================
-
 with st.sidebar:
-    st.image("whatsapp.png", width=42)
     st.header("Settings")
 
     input_level = st.selectbox(
         "Input Level",
-        ["DUN", "PARLIMEN", "MIXED"],
+        ["DUN", "PARLIMEN"],
         index=0
     )
 
@@ -288,7 +228,6 @@ with st.sidebar:
         "Split File Mode",
         [
             "All rows in ONE Excel",
-            "Separate Excel files by KAUM",
             "Separate Excel files by gender code",
         ],
         index=0
@@ -352,9 +291,10 @@ with st.sidebar:
         placeholder="Example: HITAM,KELABU,PUTIH"
     )
 
-    party_filter_text = st.text_input(
+    party_filter_selected = st.multiselect(
         "Party / Parti Filter",
-        placeholder="Leave blank for no filter. Example: PKR"
+        ["PAS", "PKR", "PPBM", "UMNO"],
+        default=[]
     )
 
     st.divider()
@@ -381,18 +321,15 @@ with st.sidebar:
     st.divider()
 
     dedup_by_phone = st.checkbox("Remove duplicate phone numbers", value=True)
-    dedup_by_nokp = st.checkbox("Remove duplicate NO KP if column exists", value=True)
-    read_all_sheets = st.checkbox("Read all sheets from each workbook", value=True)
-    create_empty_files = st.checkbox("Create empty Excel files", value=False)
+
+    st.caption("NO KP will not be used for duplicate removal.")
+    st.caption("Only the detected voter sheet will be processed.")
+    st.caption("Empty Excel files will not be created.")
 
     st.divider()
 
     print_full_summary = st.checkbox("Show full summary after processing", value=False)
 
-
-# ============================================================
-# MAIN FILE UPLOAD
-# ============================================================
 
 uploaded_files = st.file_uploader(
     "Upload Excel file(s)",
@@ -402,10 +339,6 @@ uploaded_files = st.file_uploader(
 
 run_button = st.button("Run Export", type="primary", use_container_width=True)
 
-
-# ============================================================
-# RUN EXPORT
-# ============================================================
 
 if run_button:
     if not uploaded_files:
@@ -418,15 +351,12 @@ if run_button:
         split_by_kaum = True
         split_by_gender_code = False
     else:
-        split_by_kaum = split_mode == "Separate Excel files by KAUM"
-        split_by_gender_code = split_mode == "Separate Excel files by gender code"
-
-    if "KAUM" in group_levels and split_by_kaum:
         split_by_kaum = False
+        split_by_gender_code = split_mode == "Separate Excel files by gender code"
 
     keep_kaum = build_keep_kaum(kaum_filter, custom_kaum)
     sikap_filter_list = build_sikap_filter(sikap_filter, custom_sikap)
-    party_filter = csv_to_list(party_filter_text)
+    party_filter = party_filter_selected
 
     if use_age_filter:
         max_age_text_clean = str(max_age_text).strip()
@@ -468,9 +398,9 @@ if run_button:
             "party_filter": party_filter,
             "age_filter": age_filter,
             "dedup_by_phone": dedup_by_phone,
-            "dedup_by_nokp": dedup_by_nokp,
-            "read_all_sheets": read_all_sheets,
-            "create_empty_files": create_empty_files,
+            "dedup_by_nokp": False,
+            "read_all_sheets": False,
+            "create_empty_files": False,
         }
 
         status_box = st.empty()
@@ -502,10 +432,6 @@ if run_button:
             st.error(str(e))
             st.stop()
 
-
-# ============================================================
-# RESULT DISPLAY
-# ============================================================
 
 if "zip_bytes" in st.session_state:
     col1, col2 = st.columns(2)
