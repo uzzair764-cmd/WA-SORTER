@@ -35,18 +35,37 @@ st.markdown(
         color: #666;
         margin-bottom: 2rem;
     }
-
-    .preview-box {
-        background-color: #fafafa;
-        border: 1px solid #eeeeee;
-        border-radius: 14px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
     </style>
     """,
     unsafe_allow_html=True
 )
+
+
+# ============================================================
+# RESET HANDLER — MUST RUN BEFORE WIDGETS ARE CREATED
+# ============================================================
+
+if st.session_state.get("RESET_FILTERS_NOW", False):
+    keys_to_delete = [
+        "kaum_filter",
+        "custom_kaum",
+        "sikap_filter",
+        "custom_sikap",
+        "party_filter_selected",
+        "print_full_summary",
+        "age_groups",
+        "zip_bytes",
+        "summary_text",
+        "final_rows",
+        "files_created",
+        "RESET_FILTERS_NOW",
+    ]
+
+    for key in keys_to_delete:
+        if key in st.session_state:
+            del st.session_state[key]
+
+    st.session_state["age_groups"] = []
 
 
 # ============================================================
@@ -268,132 +287,119 @@ def parse_age_groups(age_group_rows):
     return age_ranges
 
 
-def build_folder_preview(input_level, structure_code, age_ranges):
-    age_labels = []
-
+def get_preview_age_labels(age_ranges):
     if age_ranges:
-        age_labels = [x[1] for x in age_ranges]
-    else:
-        age_labels = ["18-25", "26-40", "41-60", "61 KE ATAS"]
+        return [x[1] for x in age_ranges]
+
+    return ["ADD AGE GROUP FIRST"]
+
+
+def build_folder_preview(input_level, structure_code, age_ranges):
+    age_labels = get_preview_age_labels(age_ranges)
 
     if input_level == "DUN":
         if structure_code == "DUN_DM_FILE":
             return """voter_outputs/
-└── N.XX DUN_NAME/
-    ├── DM1 NAMA_DM.xlsx
-    ├── DM2 NAMA_DM.xlsx
-    └── DM3 NAMA_DM.xlsx"""
+└── N01 DUN_NAME/
+    ├── DM01 NAMA_DM.xlsx
+    ├── DM02 NAMA_DM.xlsx
+    └── DM03 NAMA_DM.xlsx"""
 
         if structure_code == "DUN_DM_KAUM":
             return """voter_outputs/
-└── N.XX DUN_NAME/
-    └── DM1 NAMA_DM/
-        ├── DM1 NAMA_DM MELAYU.xlsx
-        ├── DM1 NAMA_DM CINA.xlsx
-        ├── DM1 NAMA_DM INDIA.xlsx
-        └── DM1 NAMA_DM LAIN-LAIN.xlsx"""
+└── N01 DUN_NAME/
+    └── DM01 NAMA_DM/
+        ├── DM01 NAMA_DM MELAYU.xlsx
+        ├── DM01 NAMA_DM CINA.xlsx
+        ├── DM01 NAMA_DM INDIA.xlsx
+        └── DM01 NAMA_DM LAIN-LAIN.xlsx"""
 
         if structure_code == "DUN_FILE":
             return """voter_outputs/
-└── N.XX DUN_NAME/
-    └── N.XX DUN_NAME.xlsx"""
+└── N01 DUN_NAME/
+    └── N01 DUN_NAME.xlsx"""
 
         if structure_code == "DUN_KAUM":
             return """voter_outputs/
-└── N.XX DUN_NAME/
-    ├── N.XX DUN_NAME MELAYU.xlsx
-    ├── N.XX DUN_NAME CINA.xlsx
-    ├── N.XX DUN_NAME INDIA.xlsx
-    └── N.XX DUN_NAME LAIN-LAIN.xlsx"""
+└── N01 DUN_NAME/
+    ├── N01 DUN_NAME MELAYU.xlsx
+    ├── N01 DUN_NAME CINA.xlsx
+    ├── N01 DUN_NAME INDIA.xlsx
+    └── N01 DUN_NAME LAIN-LAIN.xlsx"""
 
         if structure_code == "DUN_AGE":
-            preview = "voter_outputs/\n└── N.XX DUN_NAME/\n"
-            for age in age_labels:
-                preview += f"    ├── {age}.xlsx\n"
-            return preview.rstrip()
+            lines = ["voter_outputs/", "└── N01 DUN_NAME/"]
+            for i, age in enumerate(age_labels):
+                prefix = "    └──" if i == len(age_labels) - 1 else "    ├──"
+                lines.append(f"{prefix} {age}.xlsx")
+            return "\n".join(lines)
 
         if structure_code == "DUN_DM_CODE":
             return """voter_outputs/
-└── N.XX DUN_NAME/
-    └── DM1 NAMA_DM/
-        ├── DM1 NAMA_DM ML.xlsx
-        ├── DM1 NAMA_DM MP.xlsx
-        ├── DM1 NAMA_DM CL.xlsx
-        └── DM1 NAMA_DM CP.xlsx"""
+└── N01 DUN_NAME/
+    └── DM01 NAMA_DM/
+        ├── DM01 NAMA_DM ML.xlsx
+        ├── DM01 NAMA_DM MP.xlsx
+        ├── DM01 NAMA_DM CL.xlsx
+        └── DM01 NAMA_DM CP.xlsx"""
 
     else:
         if structure_code == "PARLIMEN_DUN_DM_FILE":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    └── N.XX DUN_NAME/
-        ├── DM1 NAMA_DM.xlsx
-        └── DM2 NAMA_DM.xlsx"""
+└── P001 PARLIMEN_NAME/
+    └── N01 DUN_NAME/
+        ├── DM01 NAMA_DM.xlsx
+        └── DM02 NAMA_DM.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_DM_KAUM":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    └── N.XX DUN_NAME/
-        └── DM1 NAMA_DM/
-            ├── DM1 NAMA_DM MELAYU.xlsx
-            ├── DM1 NAMA_DM CINA.xlsx
-            └── DM1 NAMA_DM LAIN-LAIN.xlsx"""
+└── P001 PARLIMEN_NAME/
+    └── N01 DUN_NAME/
+        └── DM01 NAMA_DM/
+            ├── DM01 NAMA_DM MELAYU.xlsx
+            ├── DM01 NAMA_DM CINA.xlsx
+            └── DM01 NAMA_DM LAIN-LAIN.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_FILE":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    ├── N.01 DUN_NAME.xlsx
-    └── N.02 DUN_NAME.xlsx"""
+└── P001 PARLIMEN_NAME/
+    ├── N01 DUN_NAME.xlsx
+    └── N02 DUN_NAME.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_KAUM":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    └── N.XX DUN_NAME/
-        ├── N.XX DUN_NAME MELAYU.xlsx
-        ├── N.XX DUN_NAME CINA.xlsx
-        └── N.XX DUN_NAME LAIN-LAIN.xlsx"""
+└── P001 PARLIMEN_NAME/
+    └── N01 DUN_NAME/
+        ├── N01 DUN_NAME MELAYU.xlsx
+        ├── N01 DUN_NAME CINA.xlsx
+        └── N01 DUN_NAME LAIN-LAIN.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_AGE":
-            preview = "voter_outputs/\n└── PXXX PARLIMEN_NAME/\n    └── N.XX DUN_NAME/\n"
-            for age in age_labels:
-                preview += f"        ├── {age}.xlsx\n"
-            return preview.rstrip()
+            lines = ["voter_outputs/", "└── P001 PARLIMEN_NAME/", "    └── N01 DUN_NAME/"]
+            for i, age in enumerate(age_labels):
+                prefix = "        └──" if i == len(age_labels) - 1 else "        ├──"
+                lines.append(f"{prefix} {age}.xlsx")
+            return "\n".join(lines)
 
         if structure_code == "PARLIMEN_DUN_DM_CODE":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    └── N.XX DUN_NAME/
-        └── DM1 NAMA_DM/
-            ├── DM1 NAMA_DM ML.xlsx
-            ├── DM1 NAMA_DM MP.xlsx
-            └── DM1 NAMA_DM CL.xlsx"""
+└── P001 PARLIMEN_NAME/
+    └── N01 DUN_NAME/
+        └── DM01 NAMA_DM/
+            ├── DM01 NAMA_DM ML.xlsx
+            ├── DM01 NAMA_DM MP.xlsx
+            └── DM01 NAMA_DM CL.xlsx"""
 
         if structure_code == "PARLIMEN_FILE":
             return """voter_outputs/
-└── PXXX PARLIMEN_NAME/
-    └── PXXX PARLIMEN_NAME.xlsx"""
+└── P001 PARLIMEN_NAME/
+    └── P001 PARLIMEN_NAME.xlsx"""
 
     return "voter_outputs/"
 
 
-def reset_filters():
-    keys_to_reset = [
-        "kaum_filter",
-        "custom_kaum",
-        "sikap_filter",
-        "custom_sikap",
-        "party_filter_selected",
-        "print_full_summary",
-        "age_groups",
-        "zip_bytes",
-        "summary_text",
-        "final_rows",
-        "files_created",
-    ]
-
-    for key in keys_to_reset:
-        if key in st.session_state:
-            del st.session_state[key]
-
+def request_filter_reset():
+    st.session_state["RESET_FILTERS_NOW"] = True
     st.rerun()
 
 
@@ -420,7 +426,7 @@ st.markdown(
 
 
 # ============================================================
-# SIDEBAR CONFIG
+# SIDEBAR
 # ============================================================
 
 with st.sidebar:
@@ -434,12 +440,16 @@ with st.sidebar:
     )
 
     structure_options = get_structure_options(input_level)
+
+    if st.session_state.get("structure_label") not in structure_options:
+        st.session_state["structure_label"] = list(structure_options.keys())[0]
+
     structure_label = st.selectbox(
         "Output Structure",
         list(structure_options.keys()),
-        index=0,
         key="structure_label"
     )
+
     structure_code = structure_options[structure_label]
 
     st.divider()
@@ -592,12 +602,15 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("RESET FILTERS", use_container_width=True):
-        reset_filters()
+    st.button(
+        "RESET FILTERS",
+        use_container_width=True,
+        on_click=request_filter_reset
+    )
 
 
 # ============================================================
-# DYNAMIC FOLDER STRUCTURE PREVIEW
+# FOLDER PREVIEW
 # ============================================================
 
 st.markdown("### Folder Structure Preview")
