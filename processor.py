@@ -1,4 +1,3 @@
-%%writefile processor.py
 import os
 import re
 import shutil
