@@ -300,14 +300,14 @@ def build_folder_preview(input_level, structure_code, age_ranges):
     if input_level == "DUN":
         if structure_code == "DUN_DM_FILE":
             return """voter_outputs/
-└── N01 DUN_NAME/
+└── N01 NAMA_DUN/
     ├── DM01 NAMA_DM.xlsx
     ├── DM02 NAMA_DM.xlsx
     └── DM03 NAMA_DM.xlsx"""
 
         if structure_code == "DUN_DM_KAUM":
             return """voter_outputs/
-└── N01 DUN_NAME/
+└── N01 NAMA_DUN/
     └── DM01 NAMA_DM/
         ├── DM01 NAMA_DM MELAYU.xlsx
         ├── DM01 NAMA_DM CINA.xlsx
@@ -316,19 +316,19 @@ def build_folder_preview(input_level, structure_code, age_ranges):
 
         if structure_code == "DUN_FILE":
             return """voter_outputs/
-└── N01 DUN_NAME/
-    └── N01 DUN_NAME.xlsx"""
+└── N01 NAMA_DUN/
+    └── N01 NAMA_DUN.xlsx"""
 
         if structure_code == "DUN_KAUM":
             return """voter_outputs/
-└── N01 DUN_NAME/
-    ├── N01 DUN_NAME MELAYU.xlsx
-    ├── N01 DUN_NAME CINA.xlsx
-    ├── N01 DUN_NAME INDIA.xlsx
-    └── N01 DUN_NAME LAIN-LAIN.xlsx"""
+└── N01 NAMA_DUN/
+    ├── N01 NAMA_DUN MELAYU.xlsx
+    ├── N01 NAMA_DUN CINA.xlsx
+    ├── N01 NAMA_DUN INDIA.xlsx
+    └── N01 NAMA_DUN LAIN-LAIN.xlsx"""
 
         if structure_code == "DUN_AGE":
-            lines = ["voter_outputs/", "└── N01 DUN_NAME/"]
+            lines = ["voter_outputs/", "└── N01 NAMA_DUN/"]
             for i, age in enumerate(age_labels):
                 prefix = "    └──" if i == len(age_labels) - 1 else "    ├──"
                 lines.append(f"{prefix} {age}.xlsx")
@@ -336,7 +336,7 @@ def build_folder_preview(input_level, structure_code, age_ranges):
 
         if structure_code == "DUN_DM_CODE":
             return """voter_outputs/
-└── N01 DUN_NAME/
+└── N01 NAMA_DUN/
     └── DM01 NAMA_DM/
         ├── DM01 NAMA_DM ML.xlsx
         ├── DM01 NAMA_DM MP.xlsx
@@ -347,14 +347,14 @@ def build_folder_preview(input_level, structure_code, age_ranges):
         if structure_code == "PARLIMEN_DUN_DM_FILE":
             return """voter_outputs/
 └── P001 PARLIMEN_NAME/
-    └── N01 DUN_NAME/
+    └── N01 NAMA_DUN/
         ├── DM01 NAMA_DM.xlsx
         └── DM02 NAMA_DM.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_DM_KAUM":
             return """voter_outputs/
 └── P001 PARLIMEN_NAME/
-    └── N01 DUN_NAME/
+    └── N01 NAMA_DUN/
         └── DM01 NAMA_DM/
             ├── DM01 NAMA_DM MELAYU.xlsx
             ├── DM01 NAMA_DM CINA.xlsx
@@ -363,19 +363,19 @@ def build_folder_preview(input_level, structure_code, age_ranges):
         if structure_code == "PARLIMEN_DUN_FILE":
             return """voter_outputs/
 └── P001 PARLIMEN_NAME/
-    ├── N01 DUN_NAME.xlsx
-    └── N02 DUN_NAME.xlsx"""
+    ├── N01 NAMA_DUN.xlsx
+    └── N02 NAMA_DUN.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_KAUM":
             return """voter_outputs/
 └── P001 PARLIMEN_NAME/
-    └── N01 DUN_NAME/
-        ├── N01 DUN_NAME MELAYU.xlsx
-        ├── N01 DUN_NAME CINA.xlsx
-        └── N01 DUN_NAME LAIN-LAIN.xlsx"""
+    └── N01 NAMA_DUN/
+        ├── N01 NAMA_DUN MELAYU.xlsx
+        ├── N01 NAMA_DUN CINA.xlsx
+        └── N01 NAMA_DUN LAIN-LAIN.xlsx"""
 
         if structure_code == "PARLIMEN_DUN_AGE":
-            lines = ["voter_outputs/", "└── P001 PARLIMEN_NAME/", "    └── N01 DUN_NAME/"]
+            lines = ["voter_outputs/", "└── P001 PARLIMEN_NAME/", "    └── N01 NAMA_DUN/"]
             for i, age in enumerate(age_labels):
                 prefix = "        └──" if i == len(age_labels) - 1 else "        ├──"
                 lines.append(f"{prefix} {age}.xlsx")
@@ -384,7 +384,7 @@ def build_folder_preview(input_level, structure_code, age_ranges):
         if structure_code == "PARLIMEN_DUN_DM_CODE":
             return """voter_outputs/
 └── P001 PARLIMEN_NAME/
-    └── N01 DUN_NAME/
+    └── N01 NAMA_DUN/
         └── DM01 NAMA_DM/
             ├── DM01 NAMA_DM ML.xlsx
             ├── DM01 NAMA_DM MP.xlsx
@@ -521,7 +521,7 @@ with st.sidebar:
         custom_sikap = ""
 
     party_filter_selected = st.selectbox(
-        "Party / Parti Filter",
+        "Party Filter",
         ["NO FILTER", "PAS", "PKR", "PPBM", "UMNO"],
         index=0,
         key="party_filter_selected"
