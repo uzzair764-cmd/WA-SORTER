@@ -320,14 +320,6 @@ with st.sidebar:
 
     st.divider()
 
-    dedup_by_phone = st.checkbox("Remove duplicate phone numbers", value=True)
-
-    st.caption("NO KP will not be used for duplicate removal.")
-    st.caption("Only the detected voter sheet will be processed.")
-    st.caption("Empty Excel files will not be created.")
-
-    st.divider()
-
     print_full_summary = st.checkbox("Show full summary after processing", value=False)
 
 
@@ -397,7 +389,7 @@ if run_button:
             "sikap_filter": sikap_filter_list,
             "party_filter": party_filter,
             "age_filter": age_filter,
-            "dedup_by_phone": dedup_by_phone,
+            "dedup_by_phone": True,
             "dedup_by_nokp": False,
             "read_all_sheets": False,
             "create_empty_files": False,
