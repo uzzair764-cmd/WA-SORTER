@@ -210,6 +210,52 @@ def build_sikap_filter(sikap_filter, custom_sikap):
     return [normalize_sikap_config(x) for x in csv_to_list(custom_sikap)]
 
 
+def parse_age_groups(age_group_rows):
+    age_ranges = []
+
+    for row in age_group_rows:
+        label = str(row.get("label", "")).strip()
+        min_age = str(row.get("min", "")).strip()
+        max_age = str(row.get("max", "")).strip()
+
+        if label == "" and min_age == "" and max_age == "":
+            continue
+
+        if min_age == "":
+            continue
+
+        try:
+            min_age_int = int(min_age)
+        except:
+            continue
+
+        if max_age == "":
+            max_age_int = None
+        else:
+            try:
+                max_age_int = int(max_age)
+            except:
+                continue
+
+        if label == "":
+            if max_age_int is None:
+                label = f"{min_age_int}>"
+                file_label = f"{min_age_int} KE ATAS"
+            else:
+                label = f"{min_age_int}-{max_age_int}"
+                file_label = f"{min_age_int}-{max_age_int}"
+        else:
+            file_label = label
+
+        age_ranges.append((label, file_label, min_age_int, max_age_int))
+
+    return age_ranges
+
+
+if "age_groups" not in st.session_state:
+    st.session_state["age_groups"] = []
+
+
 col_logo, col_title = st.columns([0.07, 0.93])
 
 with col_logo:
@@ -254,7 +300,7 @@ with st.sidebar:
             "LAIN-LAIN",
             "CUSTOM",
         ],
-        format_func=lambda x: {
+         format_func=lambda x: {
             "ALL": "MELAYU, CINA, INDIA, LAIN-LAIN",
             "MCI": "MELAYU, CINA, INDIA",
             "MELAYU": "MELAYU",
@@ -313,24 +359,68 @@ with st.sidebar:
 
     st.divider()
 
-    use_age_filter = st.checkbox("Apply manual age filter", value=False)
+    st.write("Age Groups")
 
-    col_age_1, col_age_2 = st.columns(2)
+    if st.button("➕ Add age group", use_container_width=True):
+        next_no = len(st.session_state["age_groups"]) + 1
+        st.session_state["age_groups"].append({
+            "id": next_no,
+            "label": "",
+            "min": "",
+            "max": "",
+        })
+        st.rerun()
 
-    with col_age_1:
-        min_age = st.number_input(
-            "Min age",
-            min_value=0,
-            max_value=120,
-            value=18,
-            step=1
-        )
+    updated_age_groups = []
 
-    with col_age_2:
-        max_age_text = st.text_input(
-            "Max age",
-            placeholder="Blank = no max"
-        )
+    for i, row in enumerate(st.session_state["age_groups"]):
+        with st.container(border=True):
+            st.caption(f"Age Group {i + 1}")
+
+            label = st.text_input(
+                "Label",
+                value=row.get("label", ""),
+                placeholder="Example: 18-40",
+                key=f"age_label_{row['id']}"
+            )
+
+            col_age_1, col_age_2 = st.columns(2)
+
+            with col_age_1:
+                min_age_input = st.text_input(
+                    "Min",
+                    value=row.get("min", ""),
+                    placeholder="18",
+                    key=f"age_min_{row['id']}"
+                )
+
+            with col_age_2:
+                max_age_input = st.text_input(
+                    "Max",
+                    value=row.get("max", ""),
+                    placeholder="Blank = no max",
+                    key=f"age_max_{row['id']}"
+                )
+
+            remove_clicked = st.button(
+                "Remove",
+                key=f"remove_age_{row['id']}",
+                use_container_width=True
+            )
+
+            if not remove_clicked:
+                updated_age_groups.append({
+                    "id": row["id"],
+                    "label": label,
+                    "min": min_age_input,
+                    "max": max_age_input,
+                })
+
+    if updated_age_groups != st.session_state["age_groups"]:
+        st.session_state["age_groups"] = updated_age_groups
+        st.rerun()
+
+    custom_age_ranges = parse_age_groups(st.session_state["age_groups"])
 
     st.divider()
 
@@ -364,13 +454,8 @@ if run_button:
     else:
         party_filter = [party_filter_selected]
 
-    if use_age_filter:
-        max_age_text_clean = str(max_age_text).strip()
-
-        if max_age_text_clean == "":
-            age_filter = (int(min_age), None)
-        else:
-            age_filter = (int(min_age), int(max_age_text_clean))
+    if custom_age_ranges:
+        age_filter = "CUSTOM_AGE_GROUPS"
     else:
         age_filter = None
 
@@ -403,6 +488,7 @@ if run_button:
             "sikap_filter": sikap_filter_list,
             "party_filter": party_filter,
             "age_filter": age_filter,
+            "custom_age_ranges": custom_age_ranges,
             "dedup_by_phone": True,
             "dedup_by_nokp": False,
             "read_all_sheets": False,
