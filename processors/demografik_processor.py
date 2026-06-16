@@ -42,8 +42,9 @@ def get_service_col(df):
     return None
 
 
-def prepare_demografik_df(df):
-    df = df.copy()
+def prepare_demografik_df(raw_df, cleaned_df):
+    raw = raw_df.copy()
+    cleaned = cleaned_df.copy()
 
     needed_cols = [
         "nokp", "umur", "jantina", "kaum_spr", "kategori_kaum",
@@ -52,39 +53,77 @@ def prepare_demografik_df(df):
     ]
 
     for col in needed_cols:
-        if col not in df.columns:
-            df[col] = ""
+        if col not in raw.columns:
+            raw[col] = ""
 
-    race_source = "kategori_kaum" if "kategori_kaum" in df.columns else "kaum_spr"
+    for col in needed_cols:
+        if col not in cleaned.columns:
+            cleaned[col] = ""
 
-    df["_race"] = df[race_source].apply(normalise_race)
-    df["_age"] = df["umur"].apply(age_group)
-    df["_jantina"] = df["jantina"].astype(str).str.strip().str.upper()
+    raw_race_source = "kategori_kaum" if "kategori_kaum" in raw.columns else "kaum_spr"
 
-    # POST-CLEANING LOGIC:
-    # Every row that reaches DEMOGRAFIK is already a valid cleaned pemilih.
-    df["_pemilih_tel"] = True
+    raw["_race"] = raw[raw_race_source].apply(normalise_race)
+    raw["_age"] = raw["umur"].apply(age_group)
+    raw["_jantina"] = raw["jantina"].astype(str).str.strip().str.upper()
 
-    service_col = get_service_col(df)
+    cleaned["_tel_count"] = 1
+
+    service_col = get_service_col(cleaned)
+
     if service_col:
-        svc = df[service_col].astype(str).str.strip().str.upper()
+        svc = cleaned[service_col].astype(str).str.strip().str.upper()
     else:
-        svc = pd.Series([""] * len(df), index=df.index)
+        svc = pd.Series([""] * len(cleaned), index=cleaned.index)
 
-    # POST-CLEANING POLIS / ASKAR:
-    # Count only cleaned rows where service number starts with G/R/T.
-    df["_polis"] = svc.str.startswith(("G", "R"), na=False)
-    df["_askar"] = svc.str.startswith("T", na=False)
+    cleaned["_polis"] = svc.str.startswith(("G", "R"), na=False)
+    cleaned["_askar"] = svc.str.startswith("T", na=False)
 
-    return df
+    tel_summary = (
+        cleaned
+        .groupby(
+            ["kod_parlimen", "nama_parlimen", "kod_dun", "nama_dun", "kod_dm", "nama_dm"],
+            dropna=False
+        )
+        .agg(
+            _pemilih_tel=("_tel_count", "sum"),
+            _polis=("_polis", "sum"),
+            _askar=("_askar", "sum")
+        )
+        .reset_index()
+    )
+
+    return raw, tel_summary
 
 
-def build_demo_row(code, name, group):
+def get_tel_counts_for_group(tel_summary, keys):
+    if tel_summary.empty:
+        return 0, 0, 0
+
+    mask = pd.Series([True] * len(tel_summary), index=tel_summary.index)
+
+    for col, val in keys.items():
+        mask &= tel_summary[col].astype(str).fillna("").eq(str(val))
+
+    subset = tel_summary.loc[mask]
+
+    if subset.empty:
+        return 0, 0, 0
+
+    return (
+        int(pd.to_numeric(subset["_pemilih_tel"], errors="coerce").fillna(0).sum()),
+        int(pd.to_numeric(subset["_polis"], errors="coerce").fillna(0).sum()),
+        int(pd.to_numeric(subset["_askar"], errors="coerce").fillna(0).sum())
+    )
+
+
+def build_demo_row(code, name, group, tel_counts):
     total = len(group)
 
     race_vc = group["_race"].value_counts()
     age_vc = group["_age"].value_counts()
     gender_vc = group["_jantina"].value_counts()
+
+    pemilih, polis, askar = tel_counts
 
     row = {
         "KOD": code,
@@ -101,9 +140,9 @@ def build_demo_row(code, name, group):
     for gender in GENDERS:
         row[gender] = int(gender_vc.get(gender, 0))
 
-    row["PEMILIH"] = int(group["_pemilih_tel"].sum())
-    row["POLIS"] = int(group["_polis"].sum())
-    row["ASKAR"] = int(group["_askar"].sum())
+    row["PEMILIH"] = pemilih
+    row["POLIS"] = polis
+    row["ASKAR"] = askar
 
     return row
 
@@ -394,8 +433,8 @@ def write_demografik_table(ws, start_row, title, subtitle, rows, name_header, fo
     return r + 2, max_name_len
 
 
-def write_demografik_xlsx_bytes(raw_df, base_name):
-    df = prepare_demografik_df(raw_df)
+def write_demografik_xlsx_bytes(raw_df, cleaned_df, base_name):
+    raw, tel_summary = prepare_demografik_df(raw_df, cleaned_df)
 
     output = io.BytesIO()
 
@@ -411,19 +450,27 @@ def write_demografik_xlsx_bytes(raw_df, base_name):
         sheet.set_column(2, 2, 20)
         sheet.set_column(3, 15, 9)
 
-        parl_label = format_parlimen_label(df, base_name)
+        parl_label = format_parlimen_label(raw, base_name)
 
         current_row = 0
         max_b_width = 20
 
         parlimen_rows = []
 
-        for (kod_dun, nama_dun), grp in df.groupby(["kod_dun", "nama_dun"], dropna=False):
+        for (kod_dun, nama_dun), grp in raw.groupby(["kod_dun", "nama_dun"], dropna=False):
             dun_code = format_dun_code(kod_dun)
             dun_name = str(nama_dun).strip().upper()
 
+            tel_counts = get_tel_counts_for_group(
+                tel_summary,
+                {
+                    "kod_dun": kod_dun,
+                    "nama_dun": nama_dun
+                }
+            )
+
             parlimen_rows.append(
-                build_demo_row(dun_code, dun_name, grp)
+                build_demo_row(dun_code, dun_name, grp, tel_counts)
             )
 
         current_row, section_b_width = write_demografik_table(
@@ -438,7 +485,7 @@ def write_demografik_xlsx_bytes(raw_df, base_name):
 
         max_b_width = max(max_b_width, section_b_width + 2)
 
-        for (kod_dun, nama_dun), dun_grp in df.groupby(["kod_dun", "nama_dun"], dropna=False):
+        for (kod_dun, nama_dun), dun_grp in raw.groupby(["kod_dun", "nama_dun"], dropna=False):
             dun_code = format_dun_code(kod_dun)
             dun_name = str(nama_dun).strip().upper()
 
@@ -450,8 +497,18 @@ def write_demografik_xlsx_bytes(raw_df, base_name):
                 dm_code = format_dm_code(kod_dm)
                 dm_name = str(nama_dm).strip().upper()
 
+                tel_counts = get_tel_counts_for_group(
+                    tel_summary,
+                    {
+                        "kod_dun": kod_dun,
+                        "nama_dun": nama_dun,
+                        "kod_dm": kod_dm,
+                        "nama_dm": nama_dm
+                    }
+                )
+
                 dm_rows.append(
-                    build_demo_row(dm_code, dm_name, dm_grp)
+                    build_demo_row(dm_code, dm_name, dm_grp, tel_counts)
                 )
 
             current_row, section_b_width = write_demografik_table(
