@@ -29,8 +29,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="big-title">Call Center Number Cleaner</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtext">Clean call center Excel/CSV files and export ZIP.</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="big-title">Call Center Number Cleaner</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="subtext">Clean call center Excel/CSV files, generate CSV chunks, cleaned XLSX, and DEMOGRAFIK report.</div>',
+    unsafe_allow_html=True
+)
 
 uploaded_files = st.file_uploader(
     "Upload Excel or CSV files",
@@ -70,7 +77,10 @@ if uploaded_files:
         with st.expander("Detected columns"):
             st.write(list(preview_df.columns))
 
-        st.dataframe(preview_df.head(30), use_container_width=True)
+        st.dataframe(
+            preview_df.head(30),
+            use_container_width=True
+        )
 
     except Exception as e:
         st.error(f"Preview error: {e}")
@@ -92,7 +102,15 @@ if uploaded_files:
             st.success("Done.")
 
             st.subheader("Summary")
-            st.dataframe(summary_df, use_container_width=True)
+            st.dataframe(
+                summary_df,
+                use_container_width=True
+            )
+
+            last_id = summary_df.attrs.get("last_generated_id", "")
+
+            if last_id:
+                st.success(f"Last ID generated: {last_id}")
 
             zip_name = (
                 uploaded_files[0].name.rsplit(".", 1)[0] + ".zip"
