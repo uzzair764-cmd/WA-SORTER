@@ -75,8 +75,17 @@ def prepare_demografik_df(raw_df, cleaned_df):
     else:
         svc = pd.Series([""] * len(cleaned), index=cleaned.index)
 
-    cleaned["_polis"] = svc.str.startswith(("G", "R"), na=False)
-    cleaned["_askar"] = svc.str.startswith("T", na=False)
+    nokp_svc = cleaned["nokp"].astype(str).str.strip().str.upper()
+
+    cleaned["_polis"] = (
+        svc.str.startswith(("G", "R"), na=False) |
+        nokp_svc.str.startswith(("G", "R"), na=False)
+    )
+
+    cleaned["_askar"] = (
+        svc.str.startswith("T", na=False) |
+        nokp_svc.str.startswith("T", na=False)
+    )
 
     tel_summary = (
         cleaned
