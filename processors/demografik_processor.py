@@ -60,9 +60,9 @@ def prepare_demografik_df(raw_df, cleaned_df):
         if col not in cleaned.columns:
             cleaned[col] = ""
 
-    raw_race_source = "kategori_kaum" if "kategori_kaum" in raw.columns else "kaum_spr"
+    race_source = "kategori_kaum" if "kategori_kaum" in raw.columns else "kaum_spr"
 
-    raw["_race"] = raw[raw_race_source].apply(normalise_race)
+    raw["_race"] = raw[race_source].apply(normalise_race)
     raw["_age"] = raw["umur"].apply(age_group)
     raw["_jantina"] = raw["jantina"].astype(str).str.strip().str.upper()
 
@@ -346,6 +346,15 @@ def write_legend(ws, row, formats):
     ws.merge_range(row + 1, 11, row + 1, 15, "KAWASAN MAJORITI BUKAN MELAYU", formats["legend_bukan"])
 
 
+def is_bukan_melayu_majority(row):
+    melayu = float(row.get("MELAYU", 0) or 0)
+    cina = float(row.get("CINA", 0) or 0)
+    india = float(row.get("INDIA", 0) or 0)
+    lain_lain = float(row.get("LAIN-LAIN", 0) or 0)
+
+    return max(cina, india, lain_lain) > melayu
+
+
 def write_demografik_table(ws, start_row, title, subtitle, rows, name_header, formats):
     columns = [
         "KOD", "NAMA", "JUMLAH PENGUNDI",
@@ -387,14 +396,7 @@ def write_demografik_table(ws, start_row, title, subtitle, rows, name_header, fo
     max_name_len = len(str(name_header))
 
     for _, row in data_df.iterrows():
-        melayu = float(row.get("MELAYU", 0) or 0)
-        non_melayu = (
-            float(row.get("CINA", 0) or 0) +
-            float(row.get("INDIA", 0) or 0) +
-            float(row.get("LAIN-LAIN", 0) or 0)
-        )
-
-        is_bukan_melayu = non_melayu > melayu
+        is_bukan_melayu = is_bukan_melayu_majority(row)
         max_name_len = max(max_name_len, len(str(row.get("NAMA", ""))))
 
         for c, col in enumerate(columns):
