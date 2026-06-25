@@ -35,7 +35,7 @@ AGE_RANGES = [
 ACTIVE_AGE_RANGES = AGE_RANGES
 
 COLUMN_ALIASES = {
-    "name": ["name", "nama", "nama penuh"],
+    "name": ["name", "nama", "nama penuh", "nama pemilih"],
 
     "nokp": [
         "nokp", "no kp", "no.kp", "no kad pengenalan",
@@ -43,9 +43,7 @@ COLUMN_ALIASES = {
     ],
 
     "jantina": ["jantina", "gender", "sex"],
-
     "umur": ["umur", "age"],
-
     "kaum_spr": ["kaum spr", "kaum_spr"],
 
     "kategori_kaum": [
@@ -55,33 +53,30 @@ COLUMN_ALIASES = {
     "number": [
         "number", "phone", "phone 1", "no tel", "no tel 1",
         "no telefon", "nombor", "telefon", "mobile phone",
-        "mobile", "mobile no", "mobile number"
+        "mobile", "mobile no", "mobile number", "no hp", "no hp 1"
     ],
 
-    "number2": ["phone 2", "no tel 2", "no telefon 2", "telefon 2"],
+    "number2": [
+        "phone 2", "no tel 2", "no telefon 2", "telefon 2",
+        "mobile phone 2", "mobile 2", "no hp 2"
+    ],
 
     "kod_lokaliti": ["kod lokaliti", "kod_lokaliti", "locality code", "locality_code"],
-
-    "nama_lokaliti": ["nama lokaliti", "nama_lokaliti", "locality"],
+    "nama_lokaliti": ["nama lokaliti", "nama_lokaliti", "lokaliti", "locality"],
 
     "kod_dm": ["kod dm", "kod_dm", "dm code", "dm_code"],
-
     "nama_dm": ["nama dm", "nama_dm", "dm"],
 
     "kod_dun": ["kod dun", "kod_dun", "dun code", "dun_code"],
-
     "nama_dun": ["nama dun", "nama_dun", "dun"],
 
     "kod_parlimen": ["kod parlimen", "kod_parlimen", "parliament code", "parliament_code"],
-
     "nama_parlimen": ["nama parlimen", "nama_parlimen", "parlimen", "parliament"],
 
     "kod_negeri": ["kod negeri", "kod_negeri", "state code", "state_code"],
-
     "nama_negeri": ["nama negeri", "nama_negeri", "negeri", "state"],
 
     "sikap": ["sikap"],
-
     "party": ["party", "parti"],
 }
 
@@ -132,7 +127,6 @@ def make_unique_columns(cols):
 
         if norm in ALIAS_LOOKUP:
             new_col = ALIAS_LOOKUP[norm]
-
         else:
             new_col = str(col).strip()
             new_col = new_col.replace("\xa0", " ")
@@ -144,7 +138,6 @@ def make_unique_columns(cols):
         if new_col not in seen:
             seen[new_col] = 0
             final_cols.append(new_col)
-
         else:
             seen[new_col] += 1
             final_cols.append(f"{new_col}__{seen[new_col]}")
@@ -394,7 +387,6 @@ def assign_age_range(age, age_ranges=None):
 
     try:
         age = int(float(str(age).strip()))
-
     except:
         return None
 
@@ -402,7 +394,6 @@ def assign_age_range(age, age_ranges=None):
         if max_age is None:
             if age >= min_age:
                 return txt_label
-
         else:
             if min_age <= age <= max_age:
                 return txt_label
@@ -609,7 +600,7 @@ def validate_required_columns(df, config):
     for col in req:
         if col == "number":
             if "number" not in df.columns and "number2" not in df.columns:
-                missing.append("number / NO TEL 1")
+                missing.append("number / PHONE 1")
         else:
             if col not in df.columns:
                 missing.append(col)
@@ -721,6 +712,41 @@ def build_summary_output_lines(output_lines):
 
 
 # ============================================================
+# ZIP NAME HELPER
+# ============================================================
+
+def build_auto_zip_name(file_paths, df, input_level):
+    if len(file_paths) == 1:
+        original_name = os.path.splitext(os.path.basename(file_paths[0]))[0]
+        return sanitize(f"WA {original_name}")
+
+    negeri_list = []
+
+    if "nama_negeri" in df.columns:
+        negeri_list = (
+            df["nama_negeri"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .replace("", pd.NA)
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+    if len(negeri_list) == 1:
+        if str(input_level).strip().upper() == "PARLIMEN":
+            return sanitize(f"WA PARLIMEN {negeri_list[0]}")
+        return sanitize(f"WA DUN {negeri_list[0]}")
+
+    if str(input_level).strip().upper() == "PARLIMEN":
+        return sanitize("WA MULTIPLE PARLIMEN")
+
+    return sanitize("WA MULTIPLE DUN")
+
+
+# ============================================================
 # MAIN EXPORT FUNCTION
 # ============================================================
 
@@ -728,7 +754,6 @@ def run_export(file_paths, config, progress_callback=None):
     global ACTIVE_AGE_RANGES
 
     output_dir = config["output_dir"]
-    zip_name = config.get("zip_name", "voter_outputs")
 
     input_level = config["input_level"]
     group_levels = config["group_levels"]
@@ -1079,7 +1104,13 @@ def run_export(file_paths, config, progress_callback=None):
 
     emit(progress_callback, "Creating ZIP...", 96)
 
-    zip_base = os.path.join(os.path.dirname(output_dir), zip_name)
+    zip_filename = build_auto_zip_name(
+        file_paths=file_paths,
+        df=df,
+        input_level=input_level
+    )
+
+    zip_base = os.path.join(os.path.dirname(output_dir), zip_filename)
     zip_path = shutil.make_archive(zip_base, "zip", output_dir)
 
     emit(progress_callback, "Done.", 100)
