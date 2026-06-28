@@ -104,7 +104,7 @@ with middle:
 
 with right:
     st.page_link(
-        "pages/3_DM_Stats.py",
+        "pages/3_Demografik_Generator.py",
         label="DEMOGRAFIK GENERATOR",
         icon="📊",
         use_container_width=True
